@@ -1,3 +1,5 @@
+
+//packages
 const mysql = require("mysql");
 const inquirer = require("inquirer");
 require("console.table");
@@ -5,7 +7,7 @@ require("console.table");
 var connection = mysql.createConnection({
     host: "localhost",
 
-    // Your port; if not 3306
+    // Your port; 
     port: 3306,
 
     // Your username
@@ -34,6 +36,7 @@ function start() {
             "add department",
             "add role",
             "update employee role",
+            "remove employee",
             "QUIT"   
         ],
         name:"answers"
@@ -52,8 +55,8 @@ function start() {
             case "add department":
                 addDepartment();
                 break;    
-            case "Remove Employees":
-                removeEmployees();
+            case "remove employee":
+                removeEmployee();
                 break;
             case "add role":
                 addRole();
@@ -87,7 +90,7 @@ function displayEmployees() {
 }
 
 function displayDept() {
-    console.log("Viewing employees by department\n");
+    console.log("Viewing a list of departments\n");
   
     connection.query("SELECT * FROM department ", function (err, res) {
       if (err) throw err;
@@ -100,7 +103,7 @@ function displayDept() {
   }
 
   function addEmployee() {
-
+    console.log("Adding an new Employee\n");
     inquirer
       .prompt([
         {
@@ -129,13 +132,14 @@ function displayDept() {
           if (err) throw err;
   
           console.table(res);
-  
+          console.log("A new Employee was added!\n");
           start();
         });
       });
   }
 
   function addDepartment() {
+    console.log("Adding a new Department!\n");
     inquirer.prompt([{
         type: "input",
         name: "department",
@@ -145,12 +149,62 @@ function displayDept() {
         connection.query('INSERT INTO department (name) VALUES (?)', [res.department], function(err, res) {
             if (err) throw err;
             console.table(res);
+            console.log("A new Department was added!\n");
             start();
         });
     });
   }
 
+  function removeEmployee() {
+    console.log("Deleting an employee");
+
+  var query =
+    `SELECT e.id, e.first_name, e.last_name
+      FROM employee e`
+
+  connection.query(query, function (err, res) {
+    if (err) throw err;
+
+    const deleteEmployeeChoices = res.map(({ id, first_name, last_name }) => ({
+      value: id, name: `${id} ${first_name} ${last_name}`
+    }));
+
+    console.table(res);
+    console.log("ArrayToDelete!\n");
+
+    promptDelete(deleteEmployeeChoices);
+  });
+  }
+
+  function promptDelete(deleteEmployeeChoices) {
+
+    inquirer
+      .prompt([
+        {
+          type: "list",
+          name: "employeeId",
+          message: "Which employee do you want to remove?",
+          choices: deleteEmployeeChoices
+        }
+      ])
+      .then(function (answer) {
+  
+        var query = `DELETE FROM employee WHERE ?`;
+        // when finished prompting, insert a new item into the db with that info
+        connection.query(query, { id: answer.employeeId }, function (err, res) {
+          if (err) throw err;
+  
+          console.table(res);
+          console.log(res.affectedRows + "Deleted!\n");
+  
+          start();
+        });
+        // console.log(query.sql);
+      });
+  }
+
   function addRole() {
+    console.log("Adding a new role!\n");
     inquirer.prompt([
         {
             message: "enter title:",
@@ -166,9 +220,10 @@ function displayDept() {
             name: "department_id"
         }
     ]).then(function (res) {
-        connection.query("INSERT INTO roles (title, salary, department_id) values (?, ?, ?)", [res.title, res.salary, res.department_id], function (err, res) {
+        connection.query("INSERT INTO role (title, salary, department_id) values (?, ?, ?)", [res.title, res.salary, res.department_id], function (err, res) {
           if (err) throw err;
           console.table(res);
+          console.log("A new role was added!\n");
           start();
         });
     });
@@ -176,6 +231,7 @@ function displayDept() {
 }
 
 function updateEmployeeRole() {
+    console.log("Updating an Employee!\n");
   inquirer.prompt([
       {
           message: "which employee would you like to update? (use first name only for now)",
@@ -190,6 +246,7 @@ function updateEmployeeRole() {
       connection.query("UPDATE employee SET role_id = ? WHERE first_name = ?", [res.role_id, res.name], function (err, res) {
           if (err) throw err;
           console.table(res);
+          console.log("Employee has been updated!\n");
           start();
       });
   });
@@ -197,9 +254,11 @@ function updateEmployeeRole() {
 }
 
 function viewAllRoles(){
+    console.log("Viewing Roles!\n");
   connection.query("SELECT role.*, department.name FROM role LEFT JOIN department ON department.id = role.department_id", function (err,res){
     if (err) throw err;
     console.table(res);
+    console.log("Roles are displayed!\n");
     start();
   }
   )};
